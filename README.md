@@ -1,7 +1,4 @@
-***
-
 <div align="center">
-  <img src="https://i.imgur.com/g06aE8j.png" alt="Project Banner" style="width: 75%;"/>
   <h1>Universal Linux Auto-Update</h1>
   <p>A friendly, set-it-and-forget-it tool that automatically keeps your Linux system fresh and up-to-date.</p>
   
