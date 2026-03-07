@@ -1,7 +1,19 @@
 #!/bin/bash
 # SCRIPT: setup_autoupdate.sh
+# DESCRIPTION: Universal Linux automatic package updater with systemd timer support
+# Supports: Arch (yay/pacman), Debian/Ubuntu (apt), Fedora (dnf), CentOS (yum), openSUSE (zypper)
+# Usage: ./setup_autoupdate.sh [OPTIONS]
+#   --install, -i          Install/update the autoupdate service
+#   --remove, -r           Remove the autoupdate service
+#   --status, -s           Show current status
+#   --time HH:MM          Set update time (use with --install)
+#   --grant-sudo, -g       Grant passwordless sudo for package manager
+#   --revoke-sudo, -x     Revoke passwordless sudo
+#   --help, -h            Show this help message
+#   (no args)             Launch GUI mode (requires zenity)
 
-# --- Configuration ---
+set -euo pipefail
+
 INSTALL_DIR="$HOME/.local/share/autoupdate"
 WORKER_SCRIPT_NAME="AutoUpdatePackages.sh"
 SERVICE_NAME="autoupdate"
@@ -10,41 +22,143 @@ SERVICE_FILE="$HOME/.config/systemd/user/${SERVICE_NAME}.service"
 TIMER_FILE="$HOME/.config/systemd/user/${SERVICE_NAME}.timer"
 LOG_FILE="$HOME/autoupdate.log"
 SUDOERS_FILE="/etc/sudoers.d/99-autoupdate-permissions"
+MODE="gui"
 
-# --- Pre-flight Check ---
-if ! command -v zenity &>/dev/null; then exit 1; fi
+msg() { echo "[INFO] $*"; }
+err() { echo "[ERROR] $*" >&2; }
+warn() { echo "[WARNING] $*" >&2; }
 
-# --- Functions ---
+show_help() {
+    cat << 'HELP'
+Usage: autoupdate [OPTIONS]
 
-install_routine() {
-    systemctl --user stop "${SERVICE_NAME}".timer 2>/dev/null
-    systemctl --user disable "${SERVICE_NAME}".timer 2>/dev/null
-    systemctl --user stop "${SERVICE_NAME}".service 2>/dev/null
-    systemctl --user disable "${SERVICE_NAME}".service 2>/dev/null
-    systemctl --user daemon-reload
+Universal Linux automatic package updater using systemd timers.
+
+OPTIONS:
+  --install, -i          Install or reconfigure the autoupdate service
+  --remove, -r          Remove the autoupdate service completely
+  --status, -s          Show current service status
+  --time HH:MM          Set daily update time (use with --install)
+  --grant-sudo, -g      Grant passwordless sudo for package manager
+  --revoke-sudo, -x     Revoke passwordless sudo permissions
+  --help, -h            Show this help message
+
+EXAMPLES:
+  autoupdate --install --time 07:30
+  autoupdate --status
+  autoupdate --remove
+  autoupdate --grant-sudo
+
+GUI MODE:
+  Run without arguments to launch interactive zenity dialog.
+
+REQUIREMENTS:
+  - systemd
+  - zenity (for GUI mode only)
+  - One of: yay, pacman, apt, dnf, yum, zypper
+HELP
+}
+
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --install|-i)
+                MODE="install"
+                ;;
+            --remove|-r)
+                MODE="remove"
+                ;;
+            --status|-s)
+                MODE="status"
+                ;;
+            --time)
+                shift
+                if [[ $# -eq 0 ]]; then
+                    err "--time requires a time argument (e.g., 07:30)"
+                    exit 1
+                fi
+                UPDATE_TIME="$1"
+                ;;
+            --grant-sudo|-g)
+                MODE="grant-sudo"
+                ;;
+            --revoke-sudo|-x)
+                MODE="revoke-sudo"
+                ;;
+            --help|-h)
+                show_help
+                exit 0
+                ;;
+            *)
+                err "Unknown option: $1"
+                show_help
+                exit 1
+                ;;
+        esac
+        shift
+    done
+}
+
+validate_time() {
+    local time="$1"
+    local sanitized
+    sanitized=$(echo "$time" | tr -d ':')
     
-    local user_time
-    user_time=$(zenity --entry --title="Set Update Time" --text="Enter desired update time (e.g., 07:40 or 0740):")
-    if [ -z "$user_time" ]; then return; fi
-
-    local sanitized_time
-    sanitized_time=$(echo "$user_time" | tr -d ':')
-
-    if [[ ! "$sanitized_time" =~ ^[0-9]{4}$ ]]; then
-        zenity --error --text="Invalid format. Please enter a 4-digit time like 0740 or 07:40."
-        return
+    if [[ ! "$sanitized" =~ ^[0-9]{4}$ ]]; then
+        err "Invalid time format. Use HH:MM (e.g., 07:30 or 0730)"
+        return 1
     fi
-
-    local hour=${sanitized_time:0:2}
-    local minute=${sanitized_time:2:2}
-
+    
+    local hour="${sanitized:0:2}"
+    local minute="${sanitized:2:2}"
+    
     if (( 10#$hour > 23 || 10#$minute > 59 )); then
-        zenity --error --text="Invalid time. Hour must be 00-23 and minute must be 00-59."
-        return
+        err "Invalid time. Hour must be 00-23, minute must be 00-59"
+        return 1
+    fi
+    
+    echo "$hour:$minute"
+}
+
+get_pm() {
+    local pm_path=""
+    if command -v yay &>/dev/null || command -v pacman &>/dev/null; then
+        pm_path="pacman"
+    elif command -v apt &>/dev/null; then
+        pm_path="apt"
+    elif command -v dnf &>/dev/null; then
+        pm_path="dnf"
+    elif command -v yum &>/dev/null; then
+        pm_path="yum"
+    elif command -v zypper &>/dev/null; then
+        pm_path="zypper"
+    fi
+    echo "$pm_path"
+}
+
+do_install() {
+    local formatted_time=""
+    
+    if [[ -n "${UPDATE_TIME:-}" ]]; then
+        formatted_time=$(validate_time "$UPDATE_TIME") || exit 1
+    else
+        if [[ "$MODE" == "cli" ]]; then
+            read -p "Enter update time (HH:MM): " -r
+            [[ -z "$REPLY" ]] && exit 0
+            formatted_time=$(validate_time "$REPLY") || exit 1
+        else
+            return
+        fi
     fi
 
-    local formatted_time="$hour:$minute"
+    msg "Stopping existing timer if present..."
+    systemctl --user stop "${SERVICE_NAME}.timer" 2>/dev/null || true
+    systemctl --user disable "${SERVICE_NAME}.timer" 2>/dev/null || true
+    systemctl --user stop "${SERVICE_NAME}.service" 2>/dev/null || true
+    systemctl --user disable "${SERVICE_NAME}.service" 2>/dev/null || true
+    systemctl --user daemon-reload
 
+    msg "Creating update script in $INSTALL_DIR..."
     mkdir -p "$INSTALL_DIR"
     tee "$SCRIPT_FULL_PATH" > /dev/null << 'EOF'
 #!/bin/bash
@@ -83,6 +197,7 @@ run_system_update() {
 EOF
     chmod +x "$SCRIPT_FULL_PATH"
 
+    msg "Creating systemd service and timer files..."
     mkdir -p "$HOME/.config/systemd/user/"
     cat > "$SERVICE_FILE" << EOF
 [Unit]
@@ -100,164 +215,227 @@ Unit=${SERVICE_NAME}.service
 [Install]
 WantedBy=timers.target
 EOF
+
+    msg "Enabling and starting timer..."
     systemctl --user daemon-reload
-    if ! systemctl --user enable "${SERVICE_NAME}".timer 2>&1; then
-        zenity --error --text="Failed to enable systemd timer. Check journalctl -xe for details."
-        return
+    if ! systemctl --user enable "${SERVICE_NAME}.timer" 2>&1; then
+        err "Failed to enable systemd timer"
+        exit 1
     fi
-    if ! systemctl --user start "${SERVICE_NAME}".timer 2>&1; then
-        zenity --error --text="Failed to start systemd timer. Check journalctl -xe for details."
-        return
+    if ! systemctl --user start "${SERVICE_NAME}.timer" 2>&1; then
+        err "Failed to start systemd timer"
+        exit 1
     fi
-    if systemctl --user is-active "${SERVICE_NAME}".timer >/dev/null 2>&1; then
-        zenity --info --text="Service Installed for ${formatted_time} daily."
+    
+    if systemctl --user is-active "${SERVICE_NAME}.timer" >/dev/null 2>&1; then
+        msg "Service installed successfully for ${formatted_time} daily"
     else
-        zenity --error --text="Timer installed but not running. Try: systemctl --user start autoupdate.timer"
+        err "Timer installed but not running"
+        exit 1
     fi
 }
 
-remove_routine() {
-    systemctl --user stop "${SERVICE_NAME}".timer 2>/dev/null
-    systemctl --user disable "${SERVICE_NAME}".timer 2>/dev/null
-    systemctl --user stop "${SERVICE_NAME}".service 2>/dev/null
-    systemctl --user disable "${SERVICE_NAME}".service 2>/dev/null
+do_remove() {
+    msg "Stopping and disabling timer..."
+    systemctl --user stop "${SERVICE_NAME}.timer" 2>/dev/null || true
+    systemctl --user disable "${SERVICE_NAME}.timer" 2>/dev/null || true
+    systemctl --user stop "${SERVICE_NAME}.service" 2>/dev/null || true
+    systemctl --user disable "${SERVICE_NAME}.service" 2>/dev/null || true
     
+    msg "Removing files..."
     rm -f "$SERVICE_FILE" "$TIMER_FILE"
     rm -rf "$INSTALL_DIR"
     
     systemctl --user daemon-reload
-    systemctl --user reset-failed 2>/dev/null
+    systemctl --user reset-failed 2>/dev/null || true
     
-    if systemctl --user is-active "${SERVICE_NAME}".timer >/dev/null 2>&1; then
-        zenity --error --text="Failed to stop timer. Try: systemctl --user stop autoupdate.timer"
-    else
-        zenity --info --text="Service Removed Successfully."
+    if systemctl --user is-active "${SERVICE_NAME}.timer" >/dev/null 2>&1; then
+        err "Failed to stop timer"
+        exit 1
     fi
+    msg "Service removed successfully"
 }
 
-add_sudo() {
-    local pm_path=""
-    if command -v yay &>/dev/null || command -v pacman &>/dev/null; then pm_path=$(command -v pacman);
-    elif command -v apt &>/dev/null; then pm_path=$(command -v apt);
-    elif command -v dnf &>/dev/null; then pm_path=$(command -v dnf);
-    elif command -v yum &>/dev/null; then pm_path=$(command -v yum);
-    elif command -v zypper &>/dev/null; then pm_path=$(command -v zypper);
-    fi
-
-    if [ -z "$pm_path" ]; then
-        zenity --error --text="Could not find a supported package manager to configure."
-        return
-    fi
-
-    CURRENT_USER=$(whoami)
-    COMMAND="echo '$CURRENT_USER ALL=(ALL) NOPASSWD: $pm_path' > '$SUDOERS_FILE' && chmod 0440 '$SUDOERS_FILE'"
-    if pkexec --user root bash -c "$COMMAND"; then
-        zenity --info --text="Sudo permission granted successfully for $pm_path."
-    else
-        zenity --error --text="Failed to grant sudo permission. Authentication may have been canceled."
-    fi
-}
-
-remove_sudo() {
-    local pm_path_base=""
-    # Get the base name of the package manager executable (e.g., "pacman")
-    if command -v yay &>/dev/null || command -v pacman &>/dev/null; then pm_path_base="pacman";
-    elif command -v apt &>/dev/null; then pm_path_base="apt";
-    elif command -v dnf &>/dev/null; then pm_path_base="dnf";
-    elif command -v yum &>/dev/null; then pm_path_base="yum";
-    elif command -v zypper &>/dev/null; then pm_path_base="zypper";
-    fi
-
-    if [ -z "$pm_path_base" ]; then
-        zenity --error --text="Could not find a supported package manager to revoke permissions for."
-        return
-    fi
-
-    # This comprehensive command removes our specific file AND searches for any other rules.
-    local COMMAND_TO_RUN="
-    rm -f '$SUDOERS_FILE'
-    sed -i.bak '/NOPASSWD.*$pm_path_base/d' /etc/sudoers
-    for file in /etc/sudoers.d/*; do
-        if [ -f \\\"\$file\\\" ]; then
-            sed -i.bak '/NOPASSWD.*$pm_path_base/d' \\\"\$file\\\"
-        fi
-    done
-    "
-    if pkexec --user root bash -c "$COMMAND_TO_RUN"; then
-        zenity --info --text="Sudo permission revoked successfully."
-    else
-        zenity --error --text="Failed to revoke sudo permission. Authentication may have been canceled."
-    fi
-}
-
-
-# --- Main Menu ---
-while true; do
-    status_service="NOT INSTALLED"
-    status_permissions="REQUIRES PASSWORD"
-    is_service_installed=false
-    has_passwordless_sudo=false
-
+do_status() {
+    echo "=== Autoupdate Service Status ==="
+    
     if [ -f "$TIMER_FILE" ]; then
         local scheduled_time
         scheduled_time=$(grep 'OnCalendar=' "$TIMER_FILE" | cut -d' ' -f2)
         if systemctl --user is-active "${SERVICE_NAME}.timer" >/dev/null 2>&1; then
-            status_service="ACTIVE (${scheduled_time})"
+            echo "Timer: ACTIVE - runs daily at $scheduled_time"
         else
-            status_service="INACTIVE (${scheduled_time})"
+            echo "Timer: INACTIVE (scheduled for $scheduled_time)"
         fi
-        is_service_installed=true
-    fi
-
-    # FUNCTIONAL CHECK: Test if sudo works without a password for the detected package manager.
-    # This is reliable, unlike checking for a file we don't have permission to see.
-    pm_test_path=""
-    if command -v yay &>/dev/null || command -v pacman &>/dev/null; then pm_test_path=$(command -v pacman);
-    elif command -v apt &>/dev/null; then pm_test_path=$(command -v apt);
-    elif command -v dnf &>/dev/null; then pm_test_path=$(command -v dnf);
-    elif command -v yum &>/dev/null; then pm_test_path=$(command -v yum);
-    elif command -v zypper &>/dev/null; then pm_test_path=$(command -v zypper);
-    fi
-
-    if [ -n "$pm_test_path" ]; then
-        # Use a simple, non-destructive command like --version to test sudo access.
-        if sudo -n "$pm_test_path" --version >/dev/null 2>&1; then
-            status_permissions="CONFIGURED"
-            has_passwordless_sudo=true
-        fi
-    fi
-
-    menu_items=( "Install / Reconfigure Service" )
-    if $is_service_installed; then
-        menu_items+=( "Remove Service" )
-    fi
-
-    if $has_passwordless_sudo; then
-        menu_items+=( "Revoke Sudo Permission" )
     else
-        menu_items+=( "Grant Sudo Permission" )
+        echo "Timer: NOT INSTALLED"
     fi
+    
+    local pm
+    pm=$(get_pm)
+    if [ -n "$pm" ]; then
+        echo "Package Manager: $pm"
+        if sudo -n "$pm" --version >/dev/null 2>&1; then
+            echo "Passwordless Sudo: CONFIGURED"
+        else
+            echo "Passwordless Sudo: NOT CONFIGURED"
+        fi
+    else
+        echo "Package Manager: NOT FOUND"
+    fi
+    
+    echo ""
+    echo "Timer details:"
+    systemctl --user list-timers --all | grep -E "^.*${SERVICE_NAME}" || echo "  (no timer found)"
+}
 
-    zenity_options=()
-    is_first=true
-    for item in "${menu_items[@]}"; do
-        if $is_first; then zenity_options+=( TRUE "$item" ); is_first=false; else zenity_options+=( FALSE "$item" ); fi
+do_grant_sudo() {
+    local pm_path
+    pm_path=$(get_pm)
+    
+    if [ -z "$pm_path" ]; then
+        err "No supported package manager found"
+        exit 1
+    fi
+    
+    local current_user
+    current_user=$(whoami)
+    local cmd="echo '$current_user ALL=(ALL) NOPASSWD: $(command -v $pm_path)' > '$SUDOERS_FILE' && chmod 0440 '$SUDOERS_FILE'"
+    
+    if pkexec --user root bash -c "$cmd"; then
+        msg "Passwordless sudo granted for $pm_path"
+    else
+        err "Failed to grant sudo permission"
+        exit 1
+    fi
+}
+
+do_revoke_sudo() {
+    local pm_path_base
+    pm_path_base=$(get_pm)
+    
+    if [ -z "$pm_path_base" ]; then
+        err "No supported package manager found"
+        exit 1
+    fi
+    
+    local cmd="
+        rm -f '$SUDOERS_FILE'
+        sed -i '/NOPASSWD.*$pm_path_base/d' /etc/sudoers 2>/dev/null || true
+        for file in /etc/sudoers.d/*; do
+            [ -f \"\$file\" ] && sed -i '/NOPASSWD.*$pm_path_base/d' \"\$file\" 2>/dev/null || true
+        done
+    "
+    
+    if pkexec --user root bash -c "$cmd"; then
+        msg "Passwordless sudo revoked"
+    else
+        err "Failed to revoke sudo permission"
+        exit 1
+    fi
+}
+
+gui_mode() {
+    if ! command -v zenity &>/dev/null; then
+        err "zenity not found. Use CLI mode or install zenity."
+        exit 1
+    fi
+    
+    while true; do
+        status_service="NOT INSTALLED"
+        status_permissions="REQUIRES PASSWORD"
+        is_service_installed=false
+        has_passwordless_sudo=false
+
+        if [ -f "$TIMER_FILE" ]; then
+            local scheduled_time
+            scheduled_time=$(grep 'OnCalendar=' "$TIMER_FILE" | cut -d' ' -f2)
+            if systemctl --user is-active "${SERVICE_NAME}.timer" >/dev/null 2>&1; then
+                status_service="ACTIVE (${scheduled_time})"
+            else
+                status_service="INACTIVE (${scheduled_time})"
+            fi
+            is_service_installed=true
+        fi
+
+        local pm_test_path
+        pm_test_path=$(get_pm)
+
+        if [ -n "$pm_test_path" ]; then
+            if sudo -n "$pm_test_path" --version >/dev/null 2>&1; then
+                status_permissions="CONFIGURED"
+                has_passwordless_sudo=true
+            fi
+        fi
+
+        menu_items=( "Install / Reconfigure Service" )
+        if $is_service_installed; then
+            menu_items+=( "Remove Service" )
+        fi
+
+        if $has_passwordless_sudo; then
+            menu_items+=( "Revoke Sudo Permission" )
+        else
+            menu_items+=( "Grant Sudo Permission" )
+        fi
+
+        zenity_options=()
+        is_first=true
+        for item in "${menu_items[@]}"; do
+            if $is_first; then zenity_options+=( TRUE "$item" ); is_first=false; else zenity_options+=( FALSE "$item" ); fi
+        done
+
+        choice=$(zenity --list \
+            --title="Universal Update Manager" \
+            --text="<b>Current Status:</b>\n  Service: <b>$status_service</b>\n  Permissions: <b>$status_permissions</b>\n\nWhat would you like to do?" \
+            --radiolist \
+            --height=400 \
+            --column="" --column="Option" \
+            "${zenity_options[@]}")
+
+        if [ $? -ne 0 ]; then break; fi
+
+        case "$choice" in
+            "Install / Reconfigure Service") 
+                UPDATE_TIME="" do_install 
+                ;;
+            "Remove Service") 
+                do_remove 
+                ;;
+            "Grant Sudo Permission") 
+                do_grant_sudo 
+                ;;
+            "Revoke Sudo Permission") 
+                do_revoke_sudo 
+                ;;
+        esac
     done
+}
 
-    choice=$(zenity --list \
-        --title="Universal Update Manager" \
-        --text="<b>Current Status:</b>\n  Service: <b>$status_service</b>\n  Permissions: <b>$status_permissions</b>\n\nWhat would you like to do?" \
-        --radiolist \
-        --height=400 \
-        --column="" --column="Option" \
-        "${zenity_options[@]}")
-
-    if [ $? -ne 0 ]; then break; fi
-
-    case "$choice" in
-        "Install / Reconfigure Service") install_routine ;;
-        "Remove Service") remove_routine ;;
-        "Grant Sudo Permission") add_sudo ;;
-        "Revoke Sudo Permission") remove_sudo ;;
+main() {
+    parse_args "$@"
+    
+    case "$MODE" in
+        install)
+            MODE="cli"
+            do_install
+            ;;
+        remove)
+            do_remove
+            ;;
+        status)
+            do_status
+            ;;
+        grant-sudo)
+            do_grant_sudo
+            ;;
+        revoke-sudo)
+            do_revoke_sudo
+            ;;
+        gui)
+            gui_mode
+            ;;
     esac
-done
+}
+
+main "$@"
