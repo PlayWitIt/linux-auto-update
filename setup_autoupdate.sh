@@ -14,13 +14,13 @@
 
 set -euo pipefail
 
-INSTALL_DIR="$HOME/.local/share/autoupdate"
-WORKER_SCRIPT_NAME="AutoUpdatePackages.sh"
-SERVICE_NAME="autoupdate"
+INSTALL_DIR="$HOME/.local/share/linux-autoupdate"
+WORKER_SCRIPT_NAME="linux-autoupdate.sh"
+SERVICE_NAME="linux-autoupdate"
 SCRIPT_FULL_PATH="${INSTALL_DIR}/${WORKER_SCRIPT_NAME}"
 SERVICE_FILE="$HOME/.config/systemd/user/${SERVICE_NAME}.service"
 TIMER_FILE="$HOME/.config/systemd/user/${SERVICE_NAME}.timer"
-LOG_FILE="$HOME/autoupdate.log"
+LOG_FILE="$HOME/linux-autoupdate.log"
 SUDOERS_FILE="/etc/sudoers.d/99-autoupdate-permissions"
 MODE="gui"
 
@@ -30,7 +30,7 @@ warn() { echo "[WARNING] $*" >&2; }
 
 show_help() {
     cat << 'HELP'
-Usage: autoupdate [OPTIONS]
+Usage: linux-autoupdate [OPTIONS]
 
 Universal Linux automatic package updater using systemd timers.
 
@@ -45,11 +45,11 @@ OPTIONS:
   --help, -h             Show this help message
 
 EXAMPLES:
-  autoupdate --install --time 07:30
-  autoupdate --status
-  autoupdate --remove
-  autoupdate --grant-sudo
-  autoupdate --gui
+  linux-autoupdate --install --time 07:30
+  linux-autoupdate --status
+  linux-autoupdate --remove
+  linux-autoupdate --grant-sudo
+  linux-autoupdate --gui
 
 GUI MODE:
   Run without arguments or with --gui to launch interactive zenity dialog.
@@ -167,7 +167,7 @@ do_install() {
     mkdir -p "$INSTALL_DIR"
     tee "$SCRIPT_FULL_PATH" > /dev/null << 'EOF'
 #!/bin/bash
-LOG_FILE="$HOME/autoupdate.log"
+LOG_FILE="$HOME/linux-autoupdate.log"
 
 run_system_update() {
     if command -v yay &>/dev/null; then
