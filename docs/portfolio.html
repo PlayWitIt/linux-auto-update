@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jonathan Wit - Developer Portfolio</title>
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a25;
+            --accent: #00d4ff;
+            --accent-secondary: #7b2cbf;
+            --accent-gradient: linear-gradient(135deg, #00d4ff, #7b2cbf);
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b0;
+            --text-muted: #606070;
+            --border: #2a2a3a;
+            --success: #00ff88;
+            --card-hover: #222230;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+        
+        /* Animated Background */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+        
+        .bg-animation::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(123, 44, 191, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(0, 212, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(0, 212, 255, 0.05) 0%, transparent 30%);
+            animation: bgPulse 15s ease-in-out infinite;
+        }
+        
+        @keyframes bgPulse {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(2%, 2%) rotate(1deg); }
+            66% { transform: translate(-1%, 1%) rotate(-1deg); }
+        }
+        
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(10, 10, 15, 0.9);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            z-index: 1000;
+            padding: 1rem 2rem;
+        }
+        
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+        
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+            position: relative;
+        }
+        
+        .nav-links a:hover {
+            color: var(--accent);
+        }
+        
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--accent-gradient);
+            transition: width 0.3s;
+        }
+        
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+        
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6rem 2rem 4rem;
+            position: relative;
+        }
+        
+        .hero-content {
+            max-width: 800px;
+            text-align: center;
+        }
+        
+        .hero-badge {
+            display: inline-block;
+            padding: 0.5rem 1.5rem;
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 50px;
+            color: var(--accent);
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 2rem;
+            animation: fadeInUp 0.6s ease-out;
+        }
+        
+        .hero h1 {
+            font-size: clamp(2.5rem, 8vw, 5rem);
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            animation: fadeInUp 0.6s ease-out 0.1s backwards;
+        }
+        
+        .hero h1 .highlight {
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .hero-subtitle {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto 2rem;
+            animation: fadeInUp 0.6s ease-out 0.2s backwards;
+        }
+        
+        .hero-cta {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            animation: fadeInUp 0.6s ease-out 0.3s backwards;
+        }
+        
+        .btn {
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            border: none;
+            font-size: 1rem;
+        }
+        
+        .btn-primary {
+            background: var(--accent-gradient);
+            color: var(--bg-primary);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.3);
+        }
+        
+        .btn-secondary {
+            background: transparent;
+            border: 2px solid var(--border);
+            color: var(--text-primary);
+        }
+        
+        .btn-secondary:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Stats */
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            margin-top: 4rem;
+            flex-wrap: wrap;
+            animation: fadeInUp 0.6s ease-out 0.4s backwards;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        /* Section Styles */
+        section {
+            padding: 6rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .section-header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+        
+        .section-header h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+        
+        .section-header p {
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .section-header .accent-line {
+            width: 60px;
+            height: 4px;
+            background: var(--accent-gradient);
+            margin: 1rem auto 0;
+            border-radius: 2px;
+        }
+        
+        /* Projects Grid */
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+        }
+        
+        .project-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            transition: all 0.3s;
+        }
+        
+        .project-card:hover {
+            transform: translateY(-8px);
+            border-color: var(--accent);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        .project-image {
+            height: 200px;
+            background: var(--bg-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .project-image::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: var(--accent-gradient);
+            opacity: 0.1;
+        }
+        
+        .project-content {
+            padding: 1.5rem;
+        }
+        
+        .project-tags {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+        
+        .project-tag {
+            padding: 0.25rem 0.75rem;
+            background: rgba(0, 212, 255, 0.1);
+            border-radius: 20px;
+            font-size: 0.75rem;
+            color: var(--accent);
+            font-weight: 500;
+        }
+        
+        .project-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .project-description {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+        
+        .project-links {
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .project-link {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            transition: opacity 0.3s;
+        }
+        
+        .project-link:hover {
+            opacity: 0.8;
+        }
+        
+        /* Skills Section */
+        .skills-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+        }
+        
+        .skill-category {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 2rem;
+            border: 1px solid var(--border);
+        }
+        
+        .skill-category h3 {
+            font-size: 1.25rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .skill-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+        
+        .skill-item {
+            padding: 0.5rem 1rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            transition: all 0.3s;
+        }
+        
+        .skill-item:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        
+        /* About Section */
+        .about-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 4rem;
+            align-items: center;
+        }
+        
+        @media (max-width: 768px) {
+            .about-content {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+        }
+        
+        .about-image {
+            width: 300px;
+            height: 300px;
+            border-radius: 20px;
+            background: var(--bg-card);
+            border: 3px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 6rem;
+            margin: 0 auto;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .about-image::before {
+            content: '';
+            position: absolute;
+            inset: -50%;
+            background: var(--accent-gradient);
+            opacity: 0.1;
+            animation: rotate 10s linear infinite;
+        }
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .about-text h3 {
+            font-size: 1.75rem;
+            margin-bottom: 1rem;
+        }
+        
+        .about-text p {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+        
+        .about-features {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+        
+        .about-feature {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: var(--text-secondary);
+        }
+        
+        .about-feature .icon {
+            width: 24px;
+            height: 24px;
+            color: var(--success);
+        }
+        
+        /* Contact Section */
+        .contact {
+            text-align: center;
+            padding: 6rem 2rem;
+            background: var(--bg-secondary);
+        }
+        
+        .contact h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .contact p {
+            color: var(--text-secondary);
+            max-width: 500px;
+            margin: 0 auto 2rem;
+        }
+        
+        .contact-links {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .contact-link {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem 2rem;
+            background: var(--bg-card);
+            border-radius: 12px;
+            color: var(--text-primary);
+            text-decoration: none;
+            border: 1px solid var(--border);
+            transition: all 0.3s;
+        }
+        
+        .contact-link:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+        
+        /* Footer */
+        footer {
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border);
+        }
+        
+        footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+        
+        /* Scroll Animations */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease-out;
+        }
+        
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        /* Mobile Menu */
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .mobile-menu-btn {
+                display: block;
+            }
+            
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .stats {
+                gap: 2rem;
+            }
+            
+            .projects-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="bg-animation"></div>
+    
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <div class="logo">JW</div>
+            <ul class="nav-links">
+                <li><a href="#about">About</a></li>
+                <li><a href="#projects">Projects</a></li>
+                <li><a href="#skills">Skills</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+            <button class="mobile-menu-btn">☰</button>
+        </div>
+    </nav>
+    
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-badge">Available for Work</div>
+            <h1>Hi, I'm <span class="highlight">Jonathan Wit</span></h1>
+            <p class="hero-subtitle">
+                Full-stack developer passionate about building tools that make development easier. 
+                Creator of PythonBootstraper (PyPI) and linux-autoupdate (GitHub).
+            </p>
+            <div class="hero-cta">
+                <a href="#projects" class="btn btn-primary">
+                    View My Work
+                </a>
+                <a href="#contact" class="btn btn-secondary">
+                    Get In Touch
+                </a>
+            </div>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-number">5+</div>
+                    <div class="stat-label">Years Coding</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">10+</div>
+                    <div class="stat-label">Projects</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">2</div>
+                    <div class="stat-label">Published Projects</div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- About Section -->
+    <section id="about">
+        <div class="section-header reveal">
+            <h2>About Me</h2>
+            <div class="accent-line"></div>
+        </div>
+        <div class="about-content reveal">
+            <div class="about-image">
+                👨‍💻
+            </div>
+            <div class="about-text">
+                <h3>Developer & Tool Builder</h3>
+                <p>
+                    I'm a developer who loves solving problems and building tools that help others code more efficiently. 
+                    My journey started with Python, and I've since expanded into web development, CLI tools, and automation.
+                </p>
+                <p>
+                    I published my first package to PyPI - PythonBootstraper - which automates 
+                    Python project setup. I've also built linux-autoupdate, a universal auto-update 
+                    tool for Linux that supports multiple distros and features both CLI and GUI modes.
+                </p>
+                <div class="about-features">
+                    <div class="about-feature">
+                        <span class="icon">✓</span>
+                        <span>Python Development</span>
+                    </div>
+                    <div class="about-feature">
+                        <span class="icon">✓</span>
+                        <span>CLI Tools</span>
+                    </div>
+                    <div class="about-feature">
+                        <span class="icon">✓</span>
+                        <span>Automation</span>
+                    </div>
+                    <div class="about-feature">
+                        <span class="icon">✓</span>
+                        <span>Git & GitHub</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Projects Section -->
+    <section id="projects">
+        <div class="section-header reveal">
+            <h2>Featured Projects</h2>
+            <p>Here's a selection of projects I've worked on, including tools, applications, and experiments.</p>
+            <div class="accent-line"></div>
+        </div>
+        <div class="projects-grid">
+            <!-- Project 1: PythonBootstraper -->
+            <div class="project-card reveal">
+                <div class="project-image">🐍</div>
+                <div class="project-content">
+                    <div class="project-tags">
+                        <span class="project-tag">Python</span>
+                        <span class="project-tag">CLI</span>
+                        <span class="project-tag">PyPI</span>
+                    </div>
+                    <h3 class="project-title">PythonBootstraper</h3>
+                    <p class="project-description">
+                        A CLI tool that automates Python project setup - creates virtual environments, 
+                        installs dependencies, and initializes Git. Published to PyPI.
+                    </p>
+                    <div class="project-links">
+                        <a href="https://pypi.org/project/PythonBootstraper/" class="project-link" target="_blank">
+                            View on PyPI →
+                        </a>
+                        <a href="https://github.com/PlayWitIt/Python-Bootstrap" class="project-link" target="_blank">
+                            GitHub →
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Project 2: linux-autoupdate -->
+            <div class="project-card reveal">
+                <div class="project-image">🐧</div>
+                <div class="project-content">
+                    <div class="project-tags">
+                        <span class="project-tag">Bash</span>
+                        <span class="project-tag">CLI</span>
+                        <span class="project-tag">Systemd</span>
+                    </div>
+                    <h3 class="project-title">linux-autoupdate</h3>
+                    <p class="project-description">
+                        Universal Linux auto-update tool supporting Arch, Debian, Fedora, and openSUSE. 
+                        Features CLI and GUI modes with systemd timers for reliable scheduling.
+                    </p>
+                    <div class="project-links">
+                        <a href="https://github.com/PlayWitIt/linux-auto-update" class="project-link" target="_blank">
+                            GitHub →
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Project 3: Placeholder -->
+            <div class="project-card reveal">
+                <div class="project-image">💡</div>
+                <div class="project-content">
+                    <div class="project-tags">
+                        <span class="project-tag">[Tag]</span>
+                        <span class="project-tag">[Tag]</span>
+                    </div>
+                    <h3 class="project-title">[Another Project]</h3>
+                    <p class="project-description">
+                        [Add more projects as you build them. This template supports 
+                        as many project cards as you need.]
+                    </p>
+                    <div class="project-links">
+                        <a href="#" class="project-link">Live Demo →</a>
+                        <a href="#" class="project-link">GitHub →</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Skills Section -->
+    <section id="skills">
+        <div class="section-header reveal">
+            <h2>Skills & Technologies</h2>
+            <p>Tools and technologies I work with regularly.</p>
+            <div class="accent-line"></div>
+        </div>
+        <div class="skills-container reveal">
+            <div class="skill-category">
+                <h3>🐍 Python</h3>
+                <div class="skill-list">
+                    <span class="skill-item">Python 3</span>
+                    <span class="skill-item">PyPI Packaging</span>
+                    <span class="skill-item">PyInstaller</span>
+                    <span class="skill-item">Click</span>
+                    <span class="skill-item">Bash Scripting</span>
+                    <span class="skill-item">Virtual Environments</span>
+                </div>
+            </div>
+            <div class="skill-category">
+                <h3>🌐 Web Development</h3>
+                <div class="skill-list">
+                    <span class="skill-item">HTML/CSS</span>
+                    <span class="skill-item">JavaScript</span>
+                    <span class="skill-item">[Your Framework]</span>
+                    <span class="skill-item">[Backend]</span>
+                </div>
+            </div>
+            <div class="skill-category">
+                <h3>🛠 Tools & Platforms</h3>
+                <div class="skill-list">
+                    <span class="skill-item">Git & GitHub</span>
+                    <span class="skill-item">VS Code</span>
+                    <span class="skill-item">Linux</span>
+                    <span class="skill-item">Docker</span>
+                    <span class="skill-item">systemd</span>
+                    <span class="skill-item">Bash</span>
+                </div>
+            </div>
+            <div class="skill-category">
+                <h3>📦 Other Skills</h3>
+                <div class="skill-list">
+                    <span class="skill-item">API Development</span>
+                    <span class="skill-item">Database</span>
+                    <span class="skill-item">[Add More]</span>
+                    <span class="skill-item">[Add More]</span>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Contact Section -->
+    <section id="contact" class="contact">
+        <h2 class="reveal">Let's Connect</h2>
+        <p class="reveal">
+            I'm always interested in hearing about new projects and opportunities.
+            Feel free to reach out if you'd like to collaborate or just say hi!
+        </p>
+        <div class="contact-links reveal">
+            <a href="mailto:your.email@example.com" class="contact-link">
+                📧 Email Me
+            </a>
+            <a href="https://github.com/PlayWitIt" class="contact-link" target="_blank">
+                🐙 GitHub
+            </a>
+            <a href="https://linkedin.com/in/yourprofile" class="contact-link" target="_blank">
+                💼 LinkedIn
+            </a>
+        </div>
+    </section>
+    
+    <!-- Footer -->
+    <footer>
+        <p>© 2026 Jonathan Wit. Built with passion and Python.</p>
+        <p>Designed & Developed by <a href="#">Jonathan Wit</a></p>
+    </footer>
+    
+    <script>
+        // Scroll Reveal Animation
+        const revealElements = document.querySelectorAll('.reveal');
+        
+        const revealOnScroll = () => {
+            const windowHeight = window.innerHeight;
+            const elementVisible = 100;
+            
+            revealElements.forEach((element) => {
+                const elementTop = element.getBoundingClientRect().top;
+                if (elementTop < windowHeight - elementVisible) {
+                    element.classList.add('active');
+                }
+            });
+        };
+        
+        window.addEventListener('scroll', revealOnScroll);
+        revealOnScroll(); // Initial check
+        
+        // Smooth scroll for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+        
+        // Mobile menu toggle
+        const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
+        const navLinks = document.querySelector('.nav-links');
+        
+        mobileMenuBtn.addEventListener('click', () => {
+            navLinks.style.display = navLinks.style.display === 'flex' ? 'none' : 'flex';
+            navLinks.style.flexDirection = 'column';
+            navLinks.style.position = 'absolute';
+            navLinks.style.top = '60px';
+            navLinks.style.left = '0';
+            navLinks.style.right = '0';
+            navLinks.style.background = 'var(--bg-primary)';
+            navLinks.style.padding = '1rem';
+            navLinks.style.borderBottom = '1px solid var(--border)';
+        });
+    </script>
+</body>
+</html>
