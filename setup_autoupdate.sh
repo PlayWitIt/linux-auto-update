@@ -17,6 +17,12 @@ if ! command -v zenity &>/dev/null; then exit 1; fi
 # --- Functions ---
 
 install_routine() {
+    systemctl --user stop "${SERVICE_NAME}".timer 2>/dev/null
+    systemctl --user disable "${SERVICE_NAME}".timer 2>/dev/null
+    systemctl --user stop "${SERVICE_NAME}".service 2>/dev/null
+    systemctl --user disable "${SERVICE_NAME}".service 2>/dev/null
+    systemctl --user daemon-reload
+    
     local user_time
     user_time=$(zenity --entry --title="Set Update Time" --text="Enter desired update time (e.g., 07:40 or 0740):")
     if [ -z "$user_time" ]; then return; fi
@@ -82,6 +88,7 @@ EOF
 [Unit]
 Description=Run universal autoupdate script
 [Service]
+Type=oneshot
 ExecStart=$SCRIPT_FULL_PATH
 EOF
     cat > "$TIMER_FILE" << EOF
@@ -89,26 +96,42 @@ EOF
 Description=Run autoupdate daily at ${formatted_time}
 [Timer]
 OnCalendar=*-*-* ${formatted_time}:00
+Unit=${SERVICE_NAME}.service
 [Install]
 WantedBy=timers.target
 EOF
     systemctl --user daemon-reload
-    if systemctl --user enable --now "${SERVICE_NAME}".timer; then
+    if ! systemctl --user enable "${SERVICE_NAME}".timer 2>&1; then
+        zenity --error --text="Failed to enable systemd timer. Check journalctl -xe for details."
+        return
+    fi
+    if ! systemctl --user start "${SERVICE_NAME}".timer 2>&1; then
+        zenity --error --text="Failed to start systemd timer. Check journalctl -xe for details."
+        return
+    fi
+    if systemctl --user is-active "${SERVICE_NAME}".timer >/dev/null 2>&1; then
         zenity --info --text="Service Installed for ${formatted_time} daily."
     else
-        zenity --error --text="Failed to enable or start the systemd timer."
+        zenity --error --text="Timer installed but not running. Try: systemctl --user start autoupdate.timer"
     fi
 }
 
 remove_routine() {
-    if systemctl --user disable --now "${SERVICE_NAME}".timer >/dev/null 2>&1; then
-        rm -f "$SERVICE_FILE" "$TIMER_FILE"
-        rm -rf "$INSTALL_DIR"
-        zenity --info --text="Service Removed Successfully."
+    systemctl --user stop "${SERVICE_NAME}".timer 2>/dev/null
+    systemctl --user disable "${SERVICE_NAME}".timer 2>/dev/null
+    systemctl --user stop "${SERVICE_NAME}".service 2>/dev/null
+    systemctl --user disable "${SERVICE_NAME}".service 2>/dev/null
+    
+    rm -f "$SERVICE_FILE" "$TIMER_FILE"
+    rm -rf "$INSTALL_DIR"
+    
+    systemctl --user daemon-reload
+    systemctl --user reset-failed 2>/dev/null
+    
+    if systemctl --user is-active "${SERVICE_NAME}".timer >/dev/null 2>&1; then
+        zenity --error --text="Failed to stop timer. Try: systemctl --user stop autoupdate.timer"
     else
-        rm -f "$SERVICE_FILE" "$TIMER_FILE"
-        rm -rf "$INSTALL_DIR"
-        zenity --warning --text="Could not disable systemd timer, but files were removed."
+        zenity --info --text="Service Removed Successfully."
     fi
 }
 
@@ -178,7 +201,11 @@ while true; do
     if [ -f "$TIMER_FILE" ]; then
         local scheduled_time
         scheduled_time=$(grep 'OnCalendar=' "$TIMER_FILE" | cut -d' ' -f2)
-        status_service="INSTALLED (${scheduled_time})"
+        if systemctl --user is-active "${SERVICE_NAME}.timer" >/dev/null 2>&1; then
+            status_service="ACTIVE (${scheduled_time})"
+        else
+            status_service="INACTIVE (${scheduled_time})"
+        fi
         is_service_installed=true
     fi
 
