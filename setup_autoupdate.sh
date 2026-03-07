@@ -170,11 +170,6 @@ do_install() {
 LOG_FILE="$HOME/autoupdate.log"
 
 run_system_update() {
-    if [ -f /var/lib/pacman/db.lck ]; then
-        echo "--- Removing stale pacman lock ---"
-        sudo rm -f /var/lib/pacman/db.lck 2>/dev/null || true
-    fi
-    
     if command -v yay &>/dev/null; then
         echo "--- Found yay. Updating Arch Linux + AUR packages... ---"
         yay -Syu --noconfirm --answerclean All --answerdiff All
