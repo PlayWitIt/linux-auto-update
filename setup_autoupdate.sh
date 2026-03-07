@@ -172,7 +172,7 @@ LOG_FILE="$HOME/autoupdate.log"
 run_system_update() {
     if command -v yay &>/dev/null; then
         echo "--- Found yay. Updating Arch Linux + AUR packages... ---"
-        yay -Syu --noconfirm
+        yay -Syu --noconfirm --answerclean All --answerdiff All
     elif command -v pacman &>/dev/null; then
         echo "--- Found pacman. Updating Arch Linux packages... ---"
         sudo pacman -Syu --noconfirm
