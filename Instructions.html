@@ -211,101 +211,95 @@
 
     <header class="header">
         <div class="emoji">🚀</div>
-        <h1>Universal Update Manager</h1>
-        <p>Your friendly, set-it-and-forget-it tool for keeping your Linux system effortlessly up-to-date.</p>
+        <h1>Linux Auto-Update</h1>
+        <p>Automatic package updates for Linux using systemd timers.</p>
     </header>
 
     <div class="container">
-        <!-- Section: Why You'll Love It -->
+        <!-- Section: Features -->
         <section id="features" class="section">
-            <h2>✨ Why You'll Love It</h2>
+            <h2>Features</h2>
             <ul class="features-grid">
                 <li class="feature-item">
-                    <strong>Effortless Updates</strong>
-                    Set a time and forget about it. Your system updates automatically every day!
+                    <strong>Automatic Updates</strong>
+                    Set a time and your system updates daily.
                 </li>
                 <li class="feature-item">
-                    <strong>Simple Graphical Menu</strong>
-                    No complex commands. A friendly menu guides you through every option.
+                    <strong>CLI & GUI</strong>
+                    CLI for servers, zenity GUI for desktops.
                 </li>
                 <li class="feature-item">
-                    <strong>Plays Well with Others</strong>
-                    Works on most major Linux distributions (Arch, Debian, Ubuntu, Fedora, etc.).
+                    <strong>Multi-Distro</strong>
+                    Works with yay, pacman, apt, dnf, yum, zypper.
                 </li>
-                 <li class="feature-item">
-                    <strong>You're in Control</strong>
-                    Easily install, reconfigure the update time, or remove the service whenever you wish.
-                </li>
-                 <li class="feature-item">
-                    <strong>Peace of Mind</strong>
-                    Keep your system secure with the latest patches without lifting a finger.
+                <li class="feature-item">
+                    <strong>Systemd Timers</strong>
+                    Modern, reliable scheduling.
                 </li>
             </ul>
         </section>
 
         <!-- Section: How to Get Started -->
         <section id="getting-started" class="section">
-            <h2>🏁 How to Get Started</h2>
+            <h2>Installation</h2>
             <ol class="steps">
                 <li>
                     <div>
-                        <strong>Save the Script</strong>
-                        Save the main script code into a file named <code>setup_autoupdate.sh</code>.
-                    </div>
-                </li>
-                <li>
-                    <div>
-                        <strong>Make it Executable</strong>
-                        Open your terminal, navigate to where you saved the file, and run the following command.
+                        <strong>Quick Install</strong>
                         <div class="code-block">
                             <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                            <pre><code>chmod +x setup_autoupdate.sh</code></pre>
+                            <pre><code>bash -c "$(curl -fsSL https://raw.githubusercontent.com/PlayWitIt/linux-auto-update/main/setup_autoupdate.sh)"</code></pre>
                         </div>
                     </div>
                 </li>
                 <li>
                     <div>
-                        <strong>Launch it!</strong>
-                        Now, simply run the script from your terminal to open the management menu.
+                        <strong>Or Manual Install</strong>
                         <div class="code-block">
                             <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                            <pre><code>./setup_autoupdate.sh</code></pre>
+                            <pre><code>curl -fsSL https://raw.githubusercontent.com/PlayWitIt/linux-auto-update/main/setup_autoupdate.sh -o setup_autoupdate.sh
+chmod +x setup_autoupdate.sh
+./setup_autoupdate.sh --install --time 07:30</code></pre>
                         </div>
                     </div>
                 </li>
             </ol>
         </section>
 
-        <!-- Section: The Menu Options Explained -->
-        <section id="menu-options" class="section">
-            <h2>📖 The Menu Options Explained</h2>
-            <div class="menu-options">
-                <p class="install">
-                    <strong>Install / Reconfigure Service:</strong> This is your starting point! Choose this to set up automatic updates for the first time or to change the daily update schedule later on. You'll be asked for your preferred time (e.g., <code>08:30</code> or <code>19:00</code>).
-                </p>
-                <p class="permissions">
-                    <strong>Grant Sudo Permission:</strong> For the script to run updates without asking for your password every day, it needs permission. This option safely grants the ability to run *only* the package manager command without a password.
-                </p>
-                <p class="remove">
-                    <strong>Remove Service:</strong> If you decide to go back to manual updates, this option cleanly removes all the script files, the schedule, and associated configurations.
-                </p>
-                <p class="revoke">
-                    <strong>Revoke Sudo Permission:</strong> This securely removes the password-free permissions you granted. It's the perfect way to tidy up if you're uninstalling the service.
-                </p>
+        <!-- Section: CLI Usage -->
+        <section id="cli-usage" class="section">
+            <h2>CLI Usage (Server/Headless)</h2>
+            <div class="code-block">
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                <pre><code># Install with daily update at 7:30 AM
+./setup_autoupdate.sh --install --time 07:30
+
+# Check status
+./setup_autoupdate.sh --status
+
+# Remove service
+./setup_autoupdate.sh --remove
+
+# Grant passwordless sudo
+./setup_autoupdate.sh --grant-sudo
+
+# Show help
+./setup_autoupdate.sh --help</code></pre>
             </div>
         </section>
-        
-        <!-- Section: How It Works -->
-        <section id="how-it-works" class="section">
-            <h2>🔧 For the Curious: How It Works</h2>
-            <p>This tool is composed of a few simple, powerful components working together:</p>
-            <ul>
-                <li><strong>The Main Script (<code>setup_autoupdate.sh</code>):</strong> The friendly graphical menu you interact with, built using Zenity.</li>
-                <li><strong>The Worker Script (<code>AutoUpdatePackages.sh</code>):</strong> This is the script that does the actual work of detecting your package manager and running the update commands. It's placed in <code>~/.local/share/autoupdate/</code>.</li>
-                <li><strong>The Scheduler (<code>systemd</code> Timers):</strong> Instead of a cron job, the script creates a modern systemd service and timer file in <code>~/.config/systemd/user/</code>. This tells your system exactly when to run the updates each day.</li>
-                <li><strong>The Log File (<code>autoupdate.log</code>):</strong> A simple log file is created in your home directory. You can check it anytime to see a history of when updates were run and what happened.</li>
-            </ul>
+
+        <!-- Section: GUI Usage -->
+        <section id="gui-usage" class="section">
+            <h2>GUI Mode (Desktop)</h2>
+            <p>Run without arguments or with --gui (requires zenity):</p>
+            <div class="code-block">
+                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                <pre><code>./setup_autoupdate.sh
+# or
+./setup_autoupdate.sh --gui</code></pre>
+            </div>
         </section>
+
     </div>
 
     <footer class="footer">
