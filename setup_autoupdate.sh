@@ -35,22 +35,24 @@ Usage: autoupdate [OPTIONS]
 Universal Linux automatic package updater using systemd timers.
 
 OPTIONS:
-  --install, -i          Install or reconfigure the autoupdate service
-  --remove, -r          Remove the autoupdate service completely
-  --status, -s          Show current service status
-  --time HH:MM          Set daily update time (use with --install)
-  --grant-sudo, -g      Grant passwordless sudo for package manager
-  --revoke-sudo, -x     Revoke passwordless sudo permissions
-  --help, -h            Show this help message
+  --gui                 Launch GUI mode (requires zenity)
+  --install, -i            Install/update the autoupdate service
+  --remove, -r             Remove the autoupdate service completely
+  --status, -s            Show current service status
+  --time HH:MM            Set daily update time (use with --install)
+  --grant-sudo, -G        Grant passwordless sudo for package manager
+  --revoke-sudo, -x       Revoke passwordless sudo permissions
+  --help, -h             Show this help message
 
 EXAMPLES:
   autoupdate --install --time 07:30
   autoupdate --status
   autoupdate --remove
   autoupdate --grant-sudo
+  autoupdate --gui
 
 GUI MODE:
-  Run without arguments to launch interactive zenity dialog.
+  Run without arguments or with --gui to launch interactive zenity dialog.
 
 REQUIREMENTS:
   - systemd
@@ -62,6 +64,9 @@ HELP
 parse_args() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
+            --gui)
+                MODE="gui"
+                ;;
             --install|-i)
                 MODE="install"
                 ;;
@@ -79,7 +84,7 @@ parse_args() {
                 fi
                 UPDATE_TIME="$1"
                 ;;
-            --grant-sudo|-g)
+            --grant-sudo|-G)
                 MODE="grant-sudo"
                 ;;
             --revoke-sudo|-x)
